@@ -38,28 +38,42 @@ const FORTUNE =
 const FALLBACK =
   "Your lucky numbers are the ones you should have sold at.";
 
-// Gate check: 1-160 characters, at most 20 words, one line, no extra whitespace.
+// Gate limits, named so the check below reads as the rule itself:
+// 1-160 characters, at most 20 words, exactly one line, no trailing
+// newline and no leading/trailing whitespace.
+const MIN_CHARS = 1;
+const MAX_CHARS = 160;
+const MAX_WORDS = 20;
+
 function gateCheck(line: string, label: string): void {
   const chars = [...line].length;
-  if (chars < 1 || chars > 160) {
-    throw new Error(`${label} is ${chars} characters, gate needs 1-160`);
+  if (chars < MIN_CHARS || chars > MAX_CHARS) {
+    throw new Error(
+      `${label} is ${chars} characters, gate needs ${MIN_CHARS}-${MAX_CHARS}`,
+    );
   }
   const words = line.trim().split(/\s+/).length;
-  if (words > 20) {
-    throw new Error(`${label} is ${words} words, gate needs at most 20`);
+  if (words > MAX_WORDS) {
+    throw new Error(`${label} is ${words} words, gate needs at most ${MAX_WORDS}`);
   }
   if (line.includes("\n") || line.trim() !== line) {
     throw new Error(`${label} must be exactly one line with no extra whitespace`);
   }
 }
 
-let line = FORTUNE;
-try {
-  gateCheck(line, "fortune");
-} catch {
-  line = FALLBACK;
-  gateCheck(line, "fallback");
+// Pick the line to ship: the fortune when it passes the gate, the
+// shorter fallback only when the fortune itself ever fails it.
+function pickLine(): string {
+  try {
+    gateCheck(FORTUNE, "fortune");
+    return FORTUNE;
+  } catch {
+    gateCheck(FALLBACK, "fallback");
+    return FALLBACK;
+  }
 }
+
+const line = pickLine();
 
 mkdirSync("output", { recursive: true });
 writeFileSync("output/entry.txt", line, "utf8");
